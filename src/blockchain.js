@@ -64,13 +64,23 @@ class Blockchain {
     _addBlock(block) {
         let self = this;
         return new Promise(async (resolve, reject) => {
-           block.height = self.chain.length + 1;
-           let _chain = self.chain;
-           block.previousBlockHash = _chain[_chain.length - 1].hash;
-           block.hash = SHA256(JSON.stringify(block)).toString();
-           block.time = new Date().getTime().toString().slice(0,-3);
-           _chain.push(block);
-           return resolve(block);
+            try {
+                block.height = self.chain.length;
+                let _chain = self.chain;
+                if(_chain.length > 0){
+                    block.previousBlockHash = _chain[_chain.length - 1].hash;
+                }
+                if(_chain[_chain.length - 1].height != _chain.length - 1){
+                    return reject('The previous block has invalid height');
+                }
+                block.time = new Date().getTime().toString().slice(0,-3);
+                block.hash = SHA256(JSON.stringify(block)).toString();                
+                _chain.push(block);
+                return resolve(block);
+            }
+            catch(error){
+                return reject(error);
+            }
         });
     }
 
@@ -112,15 +122,15 @@ class Blockchain {
                 let 
                     messageTime = parseInt(message.split(':')[1]),
                     currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
-                if(currentTime - messageTime < 5 * 60) {
+                if(currentTime - messageTime > 5 * 60) {
                     return reject('Invalid time');
                 }
                 if(!bitcoinMessage.verify(message, address, signature)){
                     return reject('Could not verify message')
                 }
                 
-                let newBlock = new Block(star);  
-                await _addBlock(newBlock);
+                let newBlock = new BlockClass.Block(star);  
+                await self._addBlock(newBlock);
                 return resolve(newBlock);
             }
             catch(error) {
@@ -179,7 +189,7 @@ class Blockchain {
             try {
                 self.chain.forEach((block) => {
                     let data = block.getBData();
-                    if(data['wallet address'] == address){
+                    if(data['address'] == address){
                         stars.push(data);
                     }
                 })
@@ -209,6 +219,9 @@ class Blockchain {
                     if(block.previousBlockHash != self.chain[i-1].hash){
                         errorLog.push({height: block.height, error: "The chain is broken"});
                     }                    
+                    if(block.height != i) {
+                        errorLog.push({height: block.height, error: "Incorrect height"});
+                    }
                 }
                 return resolve(errorLog);
             }
@@ -220,4 +233,4 @@ class Blockchain {
 
 }
 
-module.exports.Blockchain = Blockchain;   
+module.exports.Blockchain = Blockchain;
