@@ -118,6 +118,18 @@ class BlockchainController {
         });
     }
 
+     // Endpoint that allows user to validate the entire chain (POST Endpoint)
+     validateChain() {
+        this.app.post("/validateChain", async (req, res) => {              
+            const errors = await this.blockchain.validateChain();
+            if(errors.length = 0){
+                return res.status(200).json("Blockchain OK");
+            } else {
+                return res.status(500).send("An error happened!");
+            }            
+        });
+    }
+
 }
 
 module.exports = (app, blockchainObj) => { return new BlockchainController(app, blockchainObj);}

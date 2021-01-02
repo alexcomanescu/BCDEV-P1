@@ -67,6 +67,10 @@ class Blockchain {
             try {
                 block.height = self.chain.length;
                 let _chain = self.chain;
+                let chainErrors = await self.validateChain();
+                if(chainErrors && chainErrors.length > 0){
+                    return reject(chainErrors);
+                }
                 if(_chain.length > 0){
                     block.previousBlockHash = _chain[_chain.length - 1].hash;
                 }
@@ -76,6 +80,7 @@ class Blockchain {
                 block.time = new Date().getTime().toString().slice(0,-3);
                 block.hash = SHA256(JSON.stringify(block)).toString();                
                 _chain.push(block);
+                self.height = self.chain.length - 1;                    
                 return resolve(block);
             }
             catch(error){
@@ -189,7 +194,7 @@ class Blockchain {
             try {
                 self.chain.forEach((block) => {
                     let data = block.getBData();
-                    if(data['address'] == address){
+                    if(data.address == address){
                         stars.push(data);
                     }
                 })
