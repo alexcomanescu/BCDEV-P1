@@ -72,11 +72,11 @@ class Blockchain {
                     return reject(chainErrors);
                 }
                 if(_chain.length > 0){
+                    if(_chain[_chain.length - 1].height != _chain.length - 1) {
+                        return reject('The previous block has invalid height');
+                    }
                     block.previousBlockHash = _chain[_chain.length - 1].hash;
-                }
-                if(_chain[_chain.length - 1].height != _chain.length - 1){
-                    return reject('The previous block has invalid height');
-                }
+                }                
                 block.time = new Date().getTime().toString().slice(0,-3);
                 block.hash = SHA256(JSON.stringify(block)).toString();                
                 _chain.push(block);
@@ -127,6 +127,7 @@ class Blockchain {
                 let 
                     messageTime = parseInt(message.split(':')[1]),
                     currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
+                
                 if(currentTime - messageTime > 5 * 60) {
                     return reject('Invalid time');
                 }
@@ -134,7 +135,10 @@ class Blockchain {
                     return reject('Could not verify message')
                 }
                 
-                let newBlock = new BlockClass.Block(star);  
+                let newBlock = new BlockClass.Block({
+                        address:address, 
+                        star: star
+                    });  
                 await self._addBlock(newBlock);
                 return resolve(newBlock);
             }
@@ -190,14 +194,14 @@ class Blockchain {
     getStarsByWalletAddress (address) {
         let self = this;
         let stars = [];
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
-                self.chain.forEach((block) => {
-                    let data = block.getBData();
+                for(let i=1; i < self.chain.length; i++){
+                    let data = await self.chain[i].getBData();
                     if(data.address == address){
                         stars.push(data);
                     }
-                })
+                }                
                 return resolve(stars);
             } catch(error){
                 return reject(error);
@@ -218,7 +222,8 @@ class Blockchain {
             try{
                 for(let i=1; i < self.chain.length; i++){
                     let block = self.chain[i];
-                    if(!block.validate()){
+                    let isValid = await block.validate();
+                    if(!isValid){
                         errorLog.push({height: block.height, error: "Block was altered"});
                     }
                     if(block.previousBlockHash != self.chain[i-1].hash){
